@@ -1,0 +1,11 @@
+{
+  "name": "sample-plugin",
+  "version": "1.0.0",
+  "main": "main.js",
+  "license": "MIT",
+  "dependencies": {
+    "bonjour": "^3.5.0",
+    "express": "^4.17.1",
+    "get-port": "^5.1.1"
+  }
+}
