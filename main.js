@@ -1,41 +1,40 @@
 const bonjour = require('bonjour')();
-const getPort = require('get-port');
-const express = require('express');
+const io = require('socket.io-client');
+
+let browser;
 
 const main = async () => {
-    const PORT = await getPort();
-    const service = bonjour.publish({ 
-        name: 'Test Plugin', 
-        type: 'http', 
-        port: PORT,
-        txt: {
-            do: 'plugin', // must have this to be identified 
-            name: 'Test Plugin',
-            description: 'A cool test plugin!',
-            command: 'test',
-            handler: '/handler' // callback path to post command to
+    browser = bonjour.find({ type: 'http' });
+    browser.on('up', (service) => {
+        if (service.name === 'DO:PLUGINS') {
+            console.log('service up', service);
+            const socket = io(`http://localhost:${service.port}`);
+            socket.on('connect', (e) => {
+                console.log('Connected', e);
+            });
+            socket.on('disconnect', (e) => {
+                console.log('Disconnected', e);
+            });
+            socket.on('register', () => {
+                socket.emit('register', {
+                    name: 'Test Plugin',
+                    description: 'A super cool test plugin!',
+                    command: 'test'
+                });
+            });
+            socket.on('command', command => {
+                console.log(command);
+            });
         }
     });
-
-    process.on('SIGINT', () => {
-        service.stop(() => {
-            process.exit()
-        });
+    browser.on('down', (service) => {
+        if (service.name === 'DO:PLUGINS') {
+            console.log('service down...', service);
+        }
     });
-
-    const app = express();
-    app.use(express.json());
-
-    app.post('/handler', function (req, res) {
-        // do the things in here
-        const {command} = req.body;
-        console.log('Handle:', command);
-        res.json({test: true});
-    })
-    
-    app.listen(PORT, () => {
-        console.log('Listening on', PORT);
-    })
+    setInterval(() => {
+        browser.update();
+    }, 1000);
 }
 
 main().catch(err => console.error(err));
